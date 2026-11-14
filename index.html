@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Table de mixage YouTube</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1d2026; --edge: #2b3038; --text: #e8eaed; --mute: #8b93a0;
+    --a: #ff9f1c; --b: #2ec4b6; --danger: #ef476f;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: .02em; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .top small { color: var(--mute); }
+  .decks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .deck { background: var(--panel); border: 1px solid var(--edge); border-top: 3px solid var(--c); border-radius: 10px; padding: 14px; display: grid; gap: 12px; }
+  .deck.a { --c: var(--a); } .deck.b { --c: var(--b); }
+  .deck h2 { margin: 0; font-size: 14px; color: var(--c); letter-spacing: .08em; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { min-width: 0; }
+  input[type=text], input[type=number] { background: #101216; border: 1px solid var(--edge); color: var(--text); border-radius: 6px; padding: 8px 10px; font: inherit; width: 100%; }
+  button { background: #262b33; color: var(--text); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 12px; font: inherit; cursor: pointer; white-space: nowrap; }
+  button:hover { background: #30363f; }
+  button.on { background: var(--c); color: #111; border-color: var(--c); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--c, #fff); outline-offset: 2px; }
+  .screen { aspect-ratio: 16/9; background: #000; border-radius: 6px; overflow: hidden; }
+  .screen iframe { width: 100%; height: 100%; display: block; }
+  .title { color: var(--mute); font-size: 13px; min-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .time { font-variant-numeric: tabular-nums; color: var(--mute); font-size: 13px; display: flex; justify-content: space-between; }
+  input[type=range] { width: 100%; accent-color: var(--c, #fff); }
+  label { font-size: 12px; color: var(--mute); display: block; margin-bottom: 4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .val { color: var(--text); font-variant-numeric: tabular-nums; }
+  .mixer { background: var(--panel); border: 1px solid var(--edge); border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
+  .xf { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+  .xf span { font-weight: 700; }
+  .xf .la { color: var(--a); } .xf .lb { color: var(--b); }
+  #xfader { accent-color: #cfd3da; height: 36px; }
+  .note { color: var(--mute); font-size: 12px; }
+  .err { color: var(--danger); font-size: 13px; min-height: 18px; }
+  .queue { border-top: 1px solid var(--edge); padding-top: 12px; display: grid; gap: 8px; }
+  .queue h3 { margin: 0; font-size: 12px; color: var(--mute); letter-spacing: .08em; font-weight: 600; }
+  .queue ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 190px; overflow-y: auto; }
+  .queue li { display: flex; gap: 6px; align-items: center; background: #101216; border: 1px solid var(--edge); border-radius: 6px; padding: 4px 6px 4px 10px; font-size: 13px; }
+  .queue li.empty { color: var(--mute); border-style: dashed; padding: 8px 10px; }
+  .queue .qt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .queue li button { padding: 4px 8px; font-size: 12px; }
+  .queue .bpmq { width: 84px; flex: none; }
+  .chk { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--mute); margin: 0; }
+  @media (max-width: 760px) { .decks { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>Table de mixage YouTube</h1>
+    <small>2 platines, crossfader, vitesse, cue, synchro BPM</small>
+  </div>
+
+  <div class="decks">
+    <section class="deck a" id="deckA" aria-label="Platine A"></section>
+    <section class="deck b" id="deckB" aria-label="Platine B"></section>
+  </div>
+
+  <section class="mixer" aria-label="Mixage">
+    <div class="xf">
+      <span class="la">A</span>
+      <input type="range" id="xfader" min="0" max="100" value="50" aria-label="Crossfader">
+      <span class="lb">B</span>
+    </div>
+    <div class="row">
+      <button id="xfA">Tout A</button>
+      <button id="xfC">Centre</button>
+      <button id="xfB">Tout B</button>
+      <button id="auto" style="margin-left:auto">Fondu auto vers l'autre platine (8 s)</button>
+    </div>
+    <p class="note">Le crossfader règle le volume de chaque lecteur (courbe à puissance constante). YouTube n'offre pas d'accès au signal audio : pas d'égaliseur ni d'effets. Sur iPhone et iPad, le volume du lecteur n'est pas réglable.</p>
+  </section>
+</main>
+
+<script>
+var decks = {};
+var xf = document.getElementById('xfader');
+
+function deckHTML(k) {
+  return '' +
+  '<h2>PLATINE ' + k.toUpperCase() + '</h2>' +
+  '<div class="row"><input type="text" id="url-' + k + '" placeholder="Lien ou identifiant YouTube" aria-label="Lien YouTube platine ' + k + '"><button id="load-' + k + '">Charger</button></div>' +
+  '<div class="err" id="err-' + k + '"></div>' +
+  '<div class="screen"><div id="player-' + k + '"></div></div>' +
+  '<div class="title" id="title-' + k + '">Aucun morceau chargé</div>' +
+  '<div><input type="range" id="seek-' + k + '" min="0" max="1000" value="0" aria-label="Position"><div class="time"><span id="cur-' + k + '">0:00</span><span id="dur-' + k + '">0:00</span></div></div>' +
+  '<div class="row"><button id="play-' + k + '">Lecture</button><button id="cueset-' + k + '">Poser cue</button><button id="cuego-' + k + '">Aller au cue</button></div>' +
+  '<div class="grid2">' +
+    '<div><label>Vitesse <span class="val" id="rv-' + k + '">1.00×</span></label><input type="range" id="rate-' + k + '" min="0.25" max="2" step="0.01" value="1" aria-label="Vitesse"></div>' +
+    '<div><label>Volume <span class="val" id="vv-' + k + '">100</span></label><input type="range" id="vol-' + k + '" min="0" max="100" value="100" aria-label="Volume"></div>' +
+  '</div>' +
+  '<div class="row"><div style="flex:1"><label>BPM du morceau</label><input type="number" id="bpm-' + k + '" min="40" max="220" step="0.1" placeholder="ex. 124"></div><button id="tap-' + k + '" style="align-self:flex-end" title="Tape en rythme avec la musique (3 fois ou plus)">Tap tempo</button><button id="sync-' + k + '" style="align-self:flex-end">Caler sur l\'autre</button></div>' +
+  '<div class="queue">' +
+    '<h3>FILE D\'ATTENTE</h3>' +
+    '<div class="row"><input type="text" id="qurl-' + k + '" placeholder="Lien YouTube à ajouter" aria-label="Lien à ajouter à la file"><input class="bpmq" type="number" id="qbpm-' + k + '" min="40" max="220" step="0.1" placeholder="BPM" aria-label="BPM du morceau ajouté"><button id="qadd-' + k + '">Ajouter</button></div>' +
+    '<ul id="queue-' + k + '"></ul>' +
+    '<div class="row"><button id="next-' + k + '">Charger le suivant</button><label class="chk"><input type="checkbox" id="auto-' + k + '" checked> Enchaîner à la fin du morceau</label></div>' +
+  '</div>';
+}
+['a','b'].forEach(function(k){ document.getElementById('deck' + k.toUpperCase()).innerHTML = deckHTML(k); });
+
+function parseId(s) {
+  s = (s || '').trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  var m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+function fmt(t) { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+function $(id) { return document.getElementById(id); }
+
+function gains() {
+  var t = xf.value / 100;
+  return { a: Math.cos(t * Math.PI / 2), b: Math.sin(t * Math.PI / 2) };
+}
+function applyVolume(k) {
+  var d = decks[k]; if (!d || !d.ready) return;
+  var v = Math.round($('vol-' + k).value * gains()[k]);
+  try { d.p.setVolume(v); } catch (e) {}
+}
+function applyAll() { applyVolume('a'); applyVolume('b'); }
+
+function setupDeck(k) {
+  var d = decks[k] = { ready: false, cue: 0, p: null };
+  d.p = new YT.Player('player-' + k, {
+    width: '100%', height: '100%',
+    playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1 },
+    events: {
+      onReady: function () { d.ready = true; applyVolume(k); },
+      onStateChange: function (e) {
+        $('play-' + k).textContent = (e.data === 1) ? 'Pause' : 'Lecture';
+        $('play-' + k).classList.toggle('on', e.data === 1);
+        if (e.data === 0 && $('auto-' + k).checked) nextTrack(true);
+        if (e.data === 1 || e.data === 5) {
+          try { $('title-' + k).textContent = d.p.getVideoData().title || ''; } catch (x) {}
+        }
+      },
+      onError: function () { $('err-' + k).textContent = "Cette vidéo ne peut pas être lue ici (intégration interdite par son propriétaire ou identifiant invalide)."; }
+    }
+  });
+
+  function loadId(id, bpm, play) {
+    $('err-' + k).textContent = '';
+    d.cue = 0;
+    if (play) d.p.loadVideoById(id); else d.p.cueVideoById(id);
+    if (bpm) $('bpm-' + k).value = bpm;
+    setTimeout(function () { d.p.setPlaybackRate(parseFloat($('rate-' + k).value)); applyVolume(k); }, 400);
+  }
+  function load() {
+    var id = parseId($('url-' + k).value);
+    if (!id) { $('err-' + k).textContent = "Lien ou identifiant YouTube non reconnu."; return; }
+    loadId(id, null, false);
+  }
+  $('load-' + k).onclick = load;
+
+  /* File d'attente */
+  d.queue = [];
+  function renderQueue() {
+    var ul = $('queue-' + k);
+    ul.innerHTML = '';
+    if (!d.queue.length) {
+      var e = document.createElement('li'); e.className = 'empty'; e.textContent = 'File vide';
+      ul.appendChild(e); return;
+    }
+    d.queue.forEach(function (it, i) {
+      var li = document.createElement('li');
+      var t = document.createElement('span'); t.className = 'qt';
+      t.textContent = (i + 1) + '. ' + (it.title || it.id) + (it.bpm ? ' · ' + it.bpm + ' BPM' : '');
+      var go = document.createElement('button'); go.textContent = 'Charger';
+      go.onclick = function () { d.queue.splice(i, 1); renderQueue(); loadId(it.id, it.bpm, false); };
+      var up = document.createElement('button'); up.textContent = '↑'; up.setAttribute('aria-label', 'Monter');
+      up.disabled = i === 0;
+      up.onclick = function () { var x = d.queue.splice(i, 1)[0]; d.queue.splice(i - 1, 0, x); renderQueue(); };
+      var rm = document.createElement('button'); rm.textContent = '✕'; rm.setAttribute('aria-label', 'Retirer');
+      rm.onclick = function () { d.queue.splice(i, 1); renderQueue(); };
+      li.appendChild(t); li.appendChild(go); li.appendChild(up); li.appendChild(rm);
+      ul.appendChild(li);
+    });
+  }
+  function nextTrack(play) {
+    var it = d.queue.shift();
+    if (!it) return;
+    renderQueue();
+    loadId(it.id, it.bpm, play);
+  }
+  function addToQueue() {
+    var id = parseId($('qurl-' + k).value);
+    if (!id) { $('err-' + k).textContent = "Lien ou identifiant YouTube non reconnu."; return; }
+    $('err-' + k).textContent = '';
+    var bpm = parseFloat($('qbpm-' + k).value) || null;
+    var it = { id: id, bpm: bpm, title: '' };
+    d.queue.push(it);
+    $('qurl-' + k).value = ''; $('qbpm-' + k).value = '';
+    renderQueue();
+    try {
+      fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id))
+        .then(function (r) { return r.json(); })
+        .then(function (j) { it.title = j.title || ''; renderQueue(); })
+        .catch(function () {});
+    } catch (x) {}
+  }
+  $('qadd-' + k).onclick = addToQueue;
+  $('qurl-' + k).addEventListener('keydown', function (e) { if (e.key === 'Enter') addToQueue(); });
+  $('next-' + k).onclick = function () { nextTrack(false); };
+  renderQueue();
+
+  /* Tap tempo : le BPM entendu est ramené au BPM d'origine du morceau */
+  var taps = [];
+  $('tap-' + k).onclick = function () {
+    var now = Date.now();
+    if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(now);
+    if (taps.length > 9) taps.shift();
+    if (taps.length >= 3) {
+      var iv = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+      var heard = 60000 / iv;
+      $('bpm-' + k).value = (heard / parseFloat($('rate-' + k).value)).toFixed(1);
+    }
+  };
+  $('url-' + k).addEventListener('keydown', function (e) { if (e.key === 'Enter') load(); });
+
+  $('play-' + k).onclick = function () {
+    if (!d.ready) return;
+    var s = d.p.getPlayerState();
+    if (s === 1) d.p.pauseVideo(); else d.p.playVideo();
+  };
+  $('cueset-' + k).onclick = function () { if (d.ready) d.cue = d.p.getCurrentTime(); };
+  $('cuego-' + k).onclick = function () { if (d.ready) d.p.seekTo(d.cue, true); };
+
+  var seeking = false;
+  $('seek-' + k).addEventListener('input', function () { seeking = true; });
+  $('seek-' + k).addEventListener('change', function () {
+    if (d.ready) d.p.seekTo(d.p.getDuration() * this.value / 1000, true);
+    seeking = false;
+  });
+
+  $('rate-' + k).addEventListener('input', function () {
+    $('rv-' + k).textContent = parseFloat(this.value).toFixed(2) + '×';
+    if (d.ready) d.p.setPlaybackRate(parseFloat(this.value));
+  });
+  $('vol-' + k).addEventListener('input', function () {
+    $('vv-' + k).textContent = this.value;
+    applyVolume(k);
+  });
+
+  $('sync-' + k).onclick = function () {
+    var o = k === 'a' ? 'b' : 'a';
+    var mine = parseFloat($('bpm-' + k).value), theirs = parseFloat($('bpm-' + o).value);
+    if (!mine || !theirs) { $('err-' + k).textContent = "Saisis le BPM des deux morceaux."; return; }
+    var target = theirs * parseFloat($('rate-' + o).value) / mine;
+    target = Math.min(2, Math.max(0.25, target));
+    $('rate-' + k).value = target;
+    $('rate-' + k).dispatchEvent(new Event('input'));
+    $('err-' + k).textContent = (target === 2 || target === 0.25) ? "Vitesse limitée à la plage possible." : '';
+  };
+
+  setInterval(function () {
+    if (!d.ready) return;
+    try {
+      var dur = d.p.getDuration() || 0, cur = d.p.getCurrentTime() || 0;
+      $('cur-' + k).textContent = fmt(cur);
+      $('dur-' + k).textContent = fmt(dur);
+      if (!seeking && dur) $('seek-' + k).value = Math.round(cur / dur * 1000);
+    } catch (e) {}
+  }, 250);
+}
+
+function onYouTubeIframeAPIReady() { setupDeck('a'); setupDeck('b'); }
+(function () {
+  var s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
+})();
+
+xf.addEventListener('input', applyAll);
+$('xfA').onclick = function () { xf.value = 0; applyAll(); };
+$('xfC').onclick = function () { xf.value = 50; applyAll(); };
+$('xfB').onclick = function () { xf.value = 100; applyAll(); };
+
+var fading = null;
+$('auto').onclick = function () {
+  if (fading) { clearInterval(fading); fading = null; }
+  var from = parseFloat(xf.value), to = from < 50 ? 100 : 0, t0 = Date.now(), dur = 8000;
+  fading = setInterval(function () {
+    var p = Math.min(1, (Date.now() - t0) / dur);
+    xf.value = from + (to - from) * p;
+    applyAll();
+    if (p >= 1) { clearInterval(fading); fading = null; }
+  }, 60);
+};
+</script>
+</body>
+</html>
